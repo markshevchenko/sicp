@@ -1,4 +1,4 @@
-#lang scheme
+#lang sicp
 
 (define (linear-combination a b x y)
   (+ (* a x) (* b y)))
