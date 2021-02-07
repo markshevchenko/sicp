@@ -448,3 +448,48 @@
 ; > (define m3 (make-mobile (make-branch 7 m1) (make-branch 3 m2)))
 ; > (balanced? m3)
 ; #t
+
+; Exercise 2.30
+(define (square-tree tree)
+  (cond ((null? tree) nil)
+        ((not (pair? tree)) (* tree tree))
+        (else (cons (square-tree (car tree))
+                    (square-tree (cdr tree))))))
+; > (square-tree (list 1
+;                      (list 2 (list 3 4) 5)
+;                      (list 6 7)))
+; (1 (4 (9 16) 25) (36 49))
+
+(define (square-tree2 tree)
+  (map (lambda (sub-tree)
+         (if (pair? sub-tree)
+             (square-tree2 sub-tree)
+             (* sub-tree sub-tree)))
+       tree))
+; > (square-tree2 (list 1
+;                       (list 2 (list 3 4) 5)
+;                       (list 6 7)))
+; (1 (4 (9 16) 25) (36 49))
+
+; Exercise 2.31
+(define (square x) (* x x))
+(define (tree-map f tree)
+  (map (lambda (sub-tree)
+         (if (pair? sub-tree)
+             (tree-map f sub-tree)
+             (f sub-tree)))
+       tree))
+(define (square-tree3 tree) (tree-map square tree))
+; > (square-tree3 (list 1
+;                       (list 2 (list 3 4) 5)
+;                       (list 6 7)))
+; (1 (4 (9 16) 25) (36 49))
+
+; Exercise 2.32
+(define (subsets s)
+  (if (null? s)
+      (list nil)
+      (let ((rest (subsets (cdr s))))
+        (append rest (map (lambda (ss) (cons (car s) ss)) rest)))))
+; > (subsets (list 1 2 3))
+; (() (3) (2) (2 3) (1) (1 3) (1 2) (1 2 3))
