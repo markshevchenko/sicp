@@ -493,3 +493,63 @@
         (append rest (map (lambda (ss) (cons (car s) ss)) rest)))))
 ; > (subsets (list 1 2 3))
 ; (() (3) (2) (2 3) (1) (1 3) (1 2) (1 2 3))
+
+; Exercise 2.33
+
+(define (accumulate op initial sequence)
+  (if (null? sequence)
+      initial
+      (op (car sequence)
+          (accumulate op initial (cdr sequence)))))
+
+; > (map square (list 1 2 3 4 5))
+; (1 4 9 16 25)
+(define (map2 p sequence)
+  (accumulate (lambda (x y) (cons (p x) y)) nil sequence))
+; > (map2 square (list 1 2 3 4 5))
+; (1 4 9 16 25)
+
+; > (append (list 1 2 3) (list 4 5 6))
+; (1 2 3 4 5 6)
+(define (append2 seq1 seq2)
+  (accumulate cons seq2 seq1))
+; > (append2 (list 1 2 3) (list 4 5 6))
+; (1 2 3 4 5 6)
+
+; > (length (list 1 2 3 4))
+; 4
+(define (length3 sequence)
+  (accumulate (lambda (x y) (+ y 1)) 0 sequence))
+; > (length3 (list 1 2 3 4))
+; 4
+
+; Exercise 2.34
+(define (horner-eval x coefficient-sequence)
+  (accumulate (lambda (this-coeff higher-terms) (+ (* higher-terms x) this-coeff))
+              0
+              coefficient-sequence))
+
+; > (horner-eval 2 (list 1 3 0 5 0 1))
+; 79
+
+; Exercise 2.35
+(define (count-leaves2 t)
+  (accumulate + 0 (map (lambda (x)
+                         (cond ((null? x) 0)
+                               ((not (pair? x)) 1)
+                               (else (count-leaves2 x))))
+                       t)))
+; > (count-leaves '(((1 2) 3 4) ((1 2) 3 4)))
+; 8
+; > (count-leaves2 '(((1 2) 3 4) ((1 2) 3 4)))
+; 8
+
+; Exercise 2.36
+(define (accumulate-n op init seqs)
+  (if (null? (car seqs))
+      nil
+      (cons (accumulate op init (map car seqs))
+            (accumulate-n op init (map cdr seqs)))))
+
+; >  (accumulate-n + 0 '((1 2 3) (4 5 6) (7 8 9) (10 11 12)))
+; (22 26 30)
