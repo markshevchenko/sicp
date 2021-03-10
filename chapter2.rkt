@@ -553,3 +553,42 @@
 
 ; >  (accumulate-n + 0 '((1 2 3) (4 5 6) (7 8 9) (10 11 12)))
 ; (22 26 30)
+
+; Exercise 2.37
+(define (dot-product v w)
+  (accumulate + 0 (map * v w)))
+; > (dot-product (list 1 2 3 4) (list 5 6 7 8))
+; 70
+; Details: 70 = 1 * 5 + 2 * 6 + 3 * 7 + 4 * 8 = 5 + 12 + 21 + 32
+
+(define (matrix-*-vector m v)
+  (map (lambda (row) (dot-product row v)) m))
+
+; > (matrix-*-vector (list (list 1 2 3 4) (list 4 5 6 6) (list 6 7 8 9)) (list 10 20 30 40))
+; (300 560 800)
+; Details: 300 = 1 * 10 + 2 * 20 + 3 * 30 + 4 * 40
+;          560 = 4 * 10 + 5 * 20 + 6 * 30 + 6 * 40
+;          800 = 6 * 10 + 7 * 20 + 8 * 30 + 9 * 40
+
+(define (transpose mat)
+  (accumulate-n cons '() mat))
+; > (transpose '((1 2 3) (4 5 6) (7 8 9)))
+; ((1 4 7) (2 5 8) (3 6 9))
+; Details: transpoce of
+;   1 2 3
+;   4 5 6
+;   7 8 9
+; is
+;   1 4 7
+;   2 5 8
+;   3 6 9
+
+(define (matrix-*-matrix m n)
+  (let ((cols (transpose n)))
+    (map (lambda (row) (matrix-*-vector cols row)) m)))
+; > (matrix-*-matrix '((1 2) (3 4)) '((5 6) (7 8)))
+; ((19 22) (43 50))
+; Details: 19 = 1 * 5 + 2 * 7
+;          22 = 1 * 6 + 2 * 8
+;          43 = 3 * 5 + 4 * 7
+;          50 = 3 * 6 + 4 * 8
