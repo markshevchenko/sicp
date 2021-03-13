@@ -3,6 +3,7 @@
 (provide (all-defined-out))
 (require (planet "sicp.ss" ("soegaard" "sicp.plt" 2 1))) 
 
+; https://stackoverflow.com/a/41507786/1051621
 (define wave
   (segments->painter
    (list
