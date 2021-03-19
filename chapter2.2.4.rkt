@@ -159,3 +159,79 @@
   (cdr s))
 ; > (end-segment (make-segment (make-vect 1 2) (make-vect 3 4)))
 ; '(3 . 4)
+
+; Exercise 2.49
+
+(define contour
+  (segments->painter
+   (list
+    (make-segment (make-vect 0.0 0.0) (make-vect 1.0 0.0))
+    (make-segment (make-vect 1.0 0.0) (make-vect 1.0 1.0))
+    (make-segment (make-vect 1.0 1.0) (make-vect 0.0 1.0))
+    (make-segment (make-vect 0.0 1.0) (make-vect 0.0 0.0)))))
+
+(define x
+  (segments->painter
+   (list
+    (make-segment (make-vect 0.0 0.0) (make-vect 1.0 1.0))
+    (make-segment (make-vect 1.0 0.0) (make-vect 0.0 1.0)))))
+
+(define rhomb
+  (segments->painter
+   (list
+    (make-segment (make-vect 0.0 0.5) (make-vect 0.5 1.0))
+    (make-segment (make-vect 0.5 1.0) (make-vect 1.0 0.5))
+    (make-segment (make-vect 1.0 0.5) (make-vect 0.5 0.0))
+    (make-segment (make-vect 0.5 0.0) (make-vect 0.0 0.5)))))
+
+(define (transform-painter painter origin corner1 corner2)
+  (lambda (frame)
+    (let ((m (frame-coord-map frame)))
+      (let ((new-origin (m origin)))
+        (painter
+          (make-frame new-origin
+                      (sub-vect (m corner1) new-origin)
+                      (sub-vect (m corner2) new-origin)))))))
+
+(define (shrink-to-upper-right painter)
+  (transform-painter painter
+                     (make-vect 0.5 0.5)
+                     (make-vect 1.0 0.5)
+                     (make-vect 0.5 1.0)))
+
+; Exercise 2.50
+
+(define (flip-horiz.2 painter)
+  (transform-painter painter
+                     (make-vect 1.0 0.0)
+                     (make-vect 0.0 0.0)
+                     (make-vect 1.0 1.0)))
+
+(define (rotate180.2 painter)
+  (transform-painter painter
+                     (make-vect 1.0 1.0)
+                     (make-vect 0.0 1.0)
+                     (make-vect 1.0 0.0)))
+
+(define (rotate270.2 painter)
+  (transform-painter painter
+                     (make-vect 0.0 1.0)
+                     (make-vect 0.0 0.0)
+                     (make-vect 1.0 1.0)))
+
+; Exercise 2.51
+
+(define (below.2 painter1 painter2)
+  (let ((paint-up
+         (transform-painter painter1
+                            (make-vect 0.0 0.0)
+                            (make-vect 1.0 0.0)
+                            (make-vect 0.0 0.5)))
+        (paint-down
+         (transform-painter painter2
+                            (make-vect 0.0 0.5)
+                            (make-vect 1.0 0.5)
+                            (make-vect 0.0 1.0))))
+    (lambda (frame)
+      (paint-up frame)
+      (paint-down frame))))
