@@ -111,3 +111,37 @@
 ; > (scale-vect 10 (make-vect 1 2))
 ; '(10 . 20)
 
+; Exercise 2.47
+(define (make-frame2 origin edge1 edge2)
+  (list origin edge1 edge2))
+; > (make-frame2 1 2 3)
+; '(1 2 3)
+
+(define (origin-frame2 frame) (car frame))
+; > (origin-frame2 (make-frame2 1 2 3))
+; 1
+
+(define (edge1-frame2 frame) (cadr frame))
+; > (edge1-frame2 (make-frame2 1 2 3))
+; 2
+
+(define (edge2-frame2 frame) (caddr frame))
+; > (edge2-frame2 (make-frame2 1 2 3))
+; 3
+
+(define (make-frame3 origin edge1 edge2)
+  (cons origin (cons edge1 edge2)))
+; > (make-frame3 4 5 6)
+; '(4 5 . 6)
+
+(define (origin-frame3 frame) (car frame))
+; > (origin-frame3 (make-frame3 4 5 6))
+; 4
+
+(define (edge1-frame3 frame) (car (cdr frame)))
+; > (edge1-frame3 (make-frame3 4 5 6))
+; 5
+
+(define (edge2-frame3 frame) (cdr (cdr frame)))
+; > (edge2-frame3 (make-frame3 4 5 6))
+; 6
