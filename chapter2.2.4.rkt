@@ -145,3 +145,17 @@
 (define (edge2-frame3 frame) (cdr (cdr frame)))
 ; > (edge2-frame3 (make-frame3 4 5 6))
 ; 6
+
+; Exercise 2.48
+; (define (make-segment2 v1 v2)
+;   (cons v1 v2))
+
+(define (start-segment s)
+  (car s))
+; > (start-segment (make-segment (make-vect 1 2) (make-vect 3 4)))
+; '(1 . 2)
+
+(define (end-segment s)
+  (cdr s))
+; > (end-segment (make-segment (make-vect 1 2) (make-vect 3 4)))
+; '(3 . 4)
