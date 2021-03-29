@@ -324,3 +324,35 @@
 ; (1 2 3 4)
 ; > (union-set '(1 2) '(2 3))
 ; (1 2 3)
+
+; Exercise 2.60
+
+(define (element-of-set2? x set)
+  (cond ((null? set) false)
+        ((equal? x (car set)) true)
+        (else (element-of-set? x (cdr set)))))
+
+; > (element-of-set2? 2 '())
+; #f
+; > (element-of-set2? 2 '(1 3))
+; #f
+; > (element-of-set2? 2 '(2 2 2))
+; #t
+
+(define adjoin-set2 cons)
+(define union-set2 append)
+; > (adjoin-set2 2 '(1 2 3))
+; (2 1 2 3)
+; > (union-set2 '(1 2 3) '(2 3 4))
+; (1 2 3 2 3 4)
+
+(define (intersection-set2 set1 set2)
+  (cond ((or (null? set1) (null? set2)) '())
+        ((element-of-set2? (car set1) set2)
+         (cons (car set1)
+               (intersection-set2 (cdr set1) set2)))
+        (else (intersection-set2 (cdr set1) set2))))
+; > (intersection-set2 '(1 2 3) '(2 3 4 4))
+; (2 3)
+; > (intersection-set2 '(1 2 2 2 3 3) '(2 3 4 4))
+; (2 2 2 3 3)
