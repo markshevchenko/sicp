@@ -205,3 +205,73 @@
 
 ; > (deriv4 '(* x y (+ x 3)) 'x)
 ; (+ (* x y) (* y (+ x 3)))
+
+; Exercise 2.58a
+
+(define (sum3? x)
+    (and (pair? x) (eq? (cadr x) '+)))
+
+(define (product3? x)
+    (and (pair? x) (eq? (cadr x) '*)))
+
+(define (exponentiation3? x)
+  (and (pair? x) (eq? (cadr x) '**)))
+
+(define (addend3 s) (car s))
+(define (augend3 s) (caddr s))
+(define (multiplier3 p) (car p))
+(define (multiplicand3 p) (caddr p))
+(define (base3 e) (car e))
+(define (exponent3 e) (caddr e))
+
+(define (make-sum3 a1 a2)
+  (cond ((=number? a1 0) a2)
+        ((=number? a2 0) a1)
+        ((and (number? a1) (number? a2)) (+ a1 a2))
+        (else (list a1 '+ a2))))
+
+(define (make-product3 m1 m2)
+  (cond ((or (=number? m1 0) (=number? m2 0)) 0)
+        ((=number? m1 1) m2)
+        ((=number? m2 1) m1)
+        ((and (number? m1) (number? m2)) (* m1 m2))
+        (else (list m1 '* m2))))
+
+(define (make-exponentiation3 base exponent deriv)
+  (let ((power (cond ((=number? exponent 1) 1)
+                     ((=number? exponent 2) base)
+                     ((number? exponent) (list base '** (- exponent 1)))
+                     (else (list base '** (list '- exponent 1))))))
+    (cond ((or (=number? base 0) (=number? exponent 0) (=number? deriv 0)) 0)
+          ((and (number? exponent) (number? deriv))
+            (cond ((= (* exponent deriv) 1) power)
+                  ((= exponent 1) (list deriv '* power))
+                  ((= deriv 1) (list exponent '* power))
+                  (else (list (* exponent deriv) '* power))))
+          ((=number? deriv 1) (list exponent '* power))
+          (else (list exponent '* (list power '* deriv))))))
+
+(define (deriv5 exp var)
+  (cond ((number? exp) 0)
+        ((variable? exp)
+         (if (same-variable? exp var) 1 0))
+        ((sum3? exp)
+         (make-sum3 (deriv5 (addend3 exp) var)
+                    (deriv5 (augend3 exp) var)))
+        ((product3? exp)
+         (make-sum3
+          (make-product3 (multiplier3 exp)
+                         (deriv5 (multiplicand3 exp) var))
+          (make-product3 (deriv5 (multiplier3 exp) var)
+                         (multiplicand3 exp))))
+        ((exponentiation3? exp)
+         (make-exponentiation3 (base exp) (exponent exp) (deriv5 (base exp) var)))
+        (else
+         (error "Unknown expression type"))))
+
+; > (deriv5 '(x + (3 * (x + (y + 2)))) 'x)
+; 4
+
+; Compare with previous version of the function:
+; > (deriv3 '(+ x (* 3 (+ x y 2))) 'x)
+; 4
