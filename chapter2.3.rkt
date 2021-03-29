@@ -172,3 +172,36 @@
 ; 1
 ; > (deriv3 '(** x a) 'x)
 ; (* a (** x (- a 1)))
+
+; Exercise 2.57
+
+(define (augend2 s)
+  (if (= (length s) 3)
+      (caddr s)
+      (cons '+ (cdr (cdr s)))))
+
+(define (multiplicand2 p)
+  (if (= (length p) 3)
+      (caddr p)
+      (cons '* (cdr (cdr p)))))
+
+(define (deriv4 exp var)
+  (cond ((number? exp) 0)
+        ((variable? exp)
+         (if (same-variable? exp var) 1 0))
+        ((sum? exp)
+         (make-sum2 (deriv4 (addend exp) var)
+                    (deriv4 (augend2 exp) var)))
+        ((product? exp)
+         (make-sum2
+          (make-product2 (multiplier exp)
+                         (deriv4 (multiplicand2 exp) var))
+          (make-product2 (deriv4 (multiplier exp) var)
+                         (multiplicand2 exp))))
+        ((exponentiation? exp)
+         (make-exponentiation (base exp) (exponent exp) (deriv4 (base exp) var)))
+        (else
+         (error "Unknown expression type"))))
+
+; > (deriv4 '(* x y (+ x 3)) 'x)
+; (+ (* x y) (* y (+ x 3)))
