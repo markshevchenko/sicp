@@ -1,5 +1,7 @@
 #lang sicp
 
+; Chapter 2.3.1
+
 ; Exercise 2.53
 
 ; > (list 'a 'b 'c)
@@ -47,6 +49,8 @@
 
 ; > (car '(quote abracadabra))
 ; quote
+
+; Chapter 2.3.2
 
 (define (variable? x) (symbol? x))
 (define (same-variable? v1 v2)
@@ -276,7 +280,7 @@
 ; > (deriv3 '(+ x (* 3 (+ x y 2))) 'x)
 ; 4
 
-; Exercise 2.59
+; Chapter 2.3.3
 
 (define (element-of-set? x set)
   (cond ((null? set) false)
@@ -306,6 +310,8 @@
 ; (3 4)
 ; > (intersection-set '(1 2 3) '(4 5 6))
 ; ()
+
+; Exercise 2.59
 
 (define (union-set set1 set2)
   (cond ((null? set1) set2)
@@ -573,3 +579,184 @@
 ; #f
 ; > (lookup 6 '((3 "foo") ((1 "bar") () ()) ((5 "baz") () ())))
 ; #f
+
+; Chapter 2.3.4
+
+(define (make-leaf symbol weight)
+  (list 'leaf symbol weight))
+(define (leaf? object)
+  (eq? (car object) 'leaf))
+(define (symbol-leaf x) (cadr x))
+(define (weight-leaf x) (caddr x))
+(define (make-code-tree left right)
+  (list left
+        right
+        (append (symbols left) (symbols right))
+        (+ (weight left) (weight right))))
+(define (left-br tree) (car tree))
+(define (right-br tree) (cadr tree))
+(define (symbols tree)
+  (if (leaf? tree)
+      (list (symbol-leaf tree))
+      (caddr tree)))
+(define (weight tree)
+  (if (leaf? tree)
+      (weight-leaf tree)
+      (cadddr tree)))
+
+(define (decode bits tree)
+  (define (decode-1 bits current-branch)
+    (if (null? bits)
+        '()
+        (let ((next-branch (choose-branch (car bits) current-branch)))
+          (if (leaf? next-branch)
+              (cons (symbol-leaf next-branch)
+                    (decode-1 (cdr bits) tree))
+              (decode-1 (cdr bits) next-branch)))))
+  (decode-1 bits tree))
+
+(define (choose-branch bit branch)
+  (cond ((= bit 0) (left-br branch))
+        ((= bit 1) (right-br branch))
+        (else (error "Bad bit"))))
+
+(define (adjoin-hset x set)
+  (cond ((null? set) (list x))
+        ((< (weight x) (weight (car set))) (cons x set))
+        (else (cons (car set) (adjoin-hset x (cdr set))))))
+
+(define (make-leaf-set pairs)
+  (if (null? pairs)
+      '()
+      (let ((pair (car pairs)))
+        (adjoin-hset (make-leaf (car pair)
+                                (cadr pair))
+                     (make-leaf-set (cdr pairs))))))
+
+; > (make-leaf-set '((A 4) (B 2) (C 1) (D 1)))
+; ((leaf D 1) (leaf C 1) (leaf B 2) (leaf A 4))
+
+; Exercise 2.67
+
+; (define sample-tree
+;   (make-code-tree (make-leaf 'A 4)
+;                   (make-code-tree
+;                    (make-leaf 'B 2)
+;                    (make-code-tree (make-leaf 'D 1)
+;                                    (make-leaf 'C 1)))))
+; > sample-tree
+; ((leaf A 4) ((leaf B 2) ((leaf D 1) (leaf C 1) (D C) 2) (B D C) 4) (A B D C) 8)
+
+; (define sample-message '(0 1 1 0 0 1 0 1 0 1 1 1 0))
+; (decode sample-message sample-tree)
+; (A D A B B C A)
+
+; Exercise 2.68
+
+(define (encode message tree)
+  (if (null? message)
+      '()
+      (append (encode-symbol (car message) tree)
+              (encode (cdr message) tree))))
+
+(define (encode-symbol symbol tree)
+  (cond ((leaf? tree) '())
+        ((element-of-set? symbol (symbols (left-br tree))) (cons 0 (encode-symbol symbol (left-br tree))))
+        ((element-of-set? symbol (symbols (right-br tree))) (cons 1 (encode-symbol symbol (right-br tree))))))
+
+; > (encode-symbol 'A '((leaf A 4) ((leaf B 2) ((leaf D 1) (leaf C 1) (D C) 2) (B D C) 4) (A B D C) 8))
+; (0)
+; > (encode-symbol 'B '((leaf A 4) ((leaf B 2) ((leaf D 1) (leaf C 1) (D C) 2) (B D C) 4) (A B D C) 8))
+; (1 0)
+; > (encode-symbol 'C '((leaf A 4) ((leaf B 2) ((leaf D 1) (leaf C 1) (D C) 2) (B D C) 4) (A B D C) 8))
+; (1 1 1)
+; > (encode-symbol 'D '((leaf A 4) ((leaf B 2) ((leaf D 1) (leaf C 1) (D C) 2) (B D C) 4) (A B D C) 8))
+; (1 1 0)
+; > (encode '(A D A B B C A) '((leaf A 4) ((leaf B 2) ((leaf D 1) (leaf C 1) (D C) 2) (B D C) 4) (A B D C) 8))
+; (0 1 1 0 0 1 0 1 0 1 1 1 0)
+
+; Exercise 2.69
+
+(define (generate-huffman-tree pairs)
+  (successive-merge (make-leaf-set pairs)))
+
+(define (adjoin-leaf-set x set)
+  (cond ((null? set) (list x))
+        ((or (= (weight x) (weight (car set)))
+             (< (weight x) (weight (car set))))
+         (cons x set))
+        (else (cons (car set) (adjoin-leaf-set x (cdr set))))))
+
+; > (adjoin-leaf-set '((leaf D 1) (leaf C 1) (D C) 2) '((leaf B 2) (leaf A 4)))
+; (((leaf D 1) (leaf C 1) (D C) 2) (leaf B 2) (leaf A 4))
+; > (adjoin-leaf-set '((leaf D 1) (leaf C 2) (D C) 3) '((leaf B 2) (leaf A 4)))
+; ((leaf B 2) ((leaf D 1) (leaf C 2) (D C) 3) (leaf A 4))
+
+(define (successive-merge leaf-set)
+  (cond ((null? (cdr leaf-set)) (car leaf-set))
+        (else (let ((left (cadr leaf-set))
+                    (right (car leaf-set)))
+                (successive-merge (adjoin-leaf-set (make-code-tree left right) (cdr (cdr leaf-set))))))))
+
+; > (successive-merge '((leaf D 1) (leaf C 1) (leaf B 2) (leaf A 4)))
+; ((leaf A 4) ((leaf B 2) ((leaf C 1) (leaf D 1) (C D) 2) (B C D) 4) (A B C D) 8)
+; >  (decode '(0 1 1 0 0 1 0 1 0 1 1 1 0)
+;            '((leaf A 4) ((leaf B 2) ((leaf C 1) (leaf D 1) (C D) 2) (B C D) 4) (A B C D) 8))
+; (A C A B B D A)
+
+; Exercise 2.70
+
+; > (generate-huffman-tree '((NA 16) (YIP 9) (SHA 3) (A 2) (GET 2) (JOB 2) (BOOM 1) (WAH 1)))
+; ((((((leaf A 2) (leaf GET 2) (A GET) 4) (leaf SHA 3) (A GET SHA) 7)
+;    ((leaf JOB 2) ((leaf BOOM 1) (leaf WAH 1) (BOOM WAH) 2) (JOB BOOM WAH) 4)
+;    (A GET SHA JOB BOOM WAH)
+;    11)
+;   (leaf YIP 9)
+;   (A GET SHA JOB BOOM WAH YIP)
+;   20)
+;  (leaf NA 16)
+;  (A GET SHA JOB BOOM WAH YIP NA)
+;  36)
+
+; > (encode '(GET A JOB
+;             SHA NA NA NA NA NA NA NA NA
+;             GET A JOB
+;             SHA NA NA NA NA NA NA NA NA
+;             WAH YIP YIP YIP YIP YIP YIP YIP YIP YIP
+;             SHA BOOM)
+;           '((((((leaf A 2) (leaf GET 2) (A GET) 4) (leaf SHA 3) (A GET SHA) 7)
+;    ((leaf JOB 2) ((leaf BOOM 1) (leaf WAH 1) (BOOM WAH) 2) (JOB BOOM WAH) 4)
+;    (A GET SHA JOB BOOM WAH)
+;    11)
+;   (leaf YIP 9)
+;   (A GET SHA JOB BOOM WAH YIP)
+;   20)
+;  (leaf NA 16)
+;  (A GET SHA JOB BOOM WAH YIP NA)
+;  36))
+; (0 0 0 0 1 0 0 0 0 0 0 0 1 0 0 0 0 1 1 1 1 1 1 1 1 1 0 0 0 0 1 0
+;  0 0 0 0 0 0 1 0 0 0 0 1 1 1 1 1 1 1 1 1 0 0 1 1 1 0 1 0 1 0 1 0
+;  1 0 1 0 1 0 1 0 1 0 1 0 0 0 1 0 0 1 1 0)
+
+; Exercise 2.71
+
+; > (generate-huffman-tree '((E 16) (D 8) (C 4) (B 2) (A 1)))
+; ((leaf E 16) ((leaf D 8) ((leaf C 4) ((leaf B 2) (leaf A 1) (B A) 3) (C B A) 7) (D C B A) 15) (E D C B A) 31)
+
+; > (generate-huffman-tree '((J 512) (I 256) (H 128) (G 64) (F 32) (E 16) (D 8) (C 4) (B 2) (A 1)))
+; ((leaf J 512)
+;  ((leaf I 256)
+;   ((leaf H 128)
+;    ((leaf G 64)
+;     ((leaf F 32)
+;      ((leaf E 16) ((leaf D 8) ((leaf C 4) ((leaf B 2) (leaf A 1) (B A) 3) (C B A) 7) (D C B A) 15) (E D C B A) 31)
+;      (F E D C B A)
+;      63)
+;     (G F E D C B A)
+;     127)
+;    (H G F E D C B A)
+;    255)
+;   (I H G F E D C B A)
+;   511)
+;  (J I H G F E D C B A)
+;  1023)
