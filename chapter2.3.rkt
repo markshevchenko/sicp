@@ -522,3 +522,54 @@
                                    (tree->list-2 set2))))
 ; > (intersection-set4 '(2 (1 () ()) (3 () ())) '(4 (3 () ()) (5 () ())))
 ; (3 () ())
+
+; Exercise 2.66
+
+(define (make-record key payload)
+  (cons key payload))
+; > (make-record 3 '("foo"))
+; (3 "foo")
+
+(define (key record)
+  (car record))
+(define (payload record)
+  (cdr record))
+; > (key (make-record 3 '("foo")))
+; 3
+; > (payload (make-record 3 '("foo")))
+; ("foo")
+
+(define (make-node record left right)
+  (list record left right))
+; > (make-node (make-record 3 '("foo"))
+;              (make-node (make-record 1 '("bar")) '() '())
+;              (make-node (make-record 5 '("baz")) '() '()))
+; ((3 "foo") ((1 "bar") () ()) ((5 "baz") () ()))
+
+(define (left node)
+  (cadr node))
+; > (left '((3 "foo") ((1 "bar") () ()) ((5 "baz") () ())))
+; ((1 "bar") () ())
+
+(define (right node)
+  (caddr node))
+; > (right '((3 "foo") ((1 "bar") () ()) ((5 "baz") () ())))
+; ((5 "baz") () ())
+
+(define (lookup given-key set-of-records)
+  (cond ((null? set-of-records) false)
+        ((= given-key (key (car set-of-records))) true)
+        ((< given-key (key (car set-of-records))) (lookup given-key (left set-of-records)))
+        ((> given-key (key (car set-of-records))) (lookup given-key (right set-of-records)))))
+; > (lookup 1 '((3 "foo") ((1 "bar") () ()) ((5 "baz") () ())))
+; #t
+; > (lookup 3 '((3 "foo") ((1 "bar") () ()) ((5 "baz") () ())))
+; #t
+; > (lookup 5 '((3 "foo") ((1 "bar") () ()) ((5 "baz") () ())))
+; #t
+; > (lookup 0 '((3 "foo") ((1 "bar") () ()) ((5 "baz") () ())))
+; #f
+; > (lookup 2 '((3 "foo") ((1 "bar") () ()) ((5 "baz") () ())))
+; #f
+; > (lookup 6 '((3 "foo") ((1 "bar") () ()) ((5 "baz") () ())))
+; #f
