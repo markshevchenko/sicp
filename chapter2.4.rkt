@@ -312,3 +312,32 @@
 ; done
 ; > (deriv '(** (+ 2 x) 3) 'x)
 ; (* 3 (** (+ 2 x) 2))
+
+(define (make-from-real-imag.2 x y)
+  (define (dispatch op)
+    (cond ((eq? op 'real-part) x)
+          ((eq? op 'imag-part) y)
+          ((eq? op 'magnitude) (sqrt (+ (square x) (square y))))
+          ((eq? op 'angle) (atan y x))
+          (else (error "Unknows operation -- MAKE-FROM-REAL-IMAG.2 " op))))
+
+  dispatch)
+
+(define (apply-generic.2 op arg) (arg op))
+; > (apply-generic.2 'magnitude (make-from-real-imag.2 3 4))
+; 5
+
+; Exercise 2.75
+
+(define (make-from-mag-ang.2 r a)
+  (define (dispatch op)
+    (cond ((eq? op 'magnitude) r)
+          ((eq? op 'angle) a)
+          ((eq? op 'real-part) (* r (cos a)))
+          ((eq? op 'imag-part) (* r (sin a)))
+          (else (error ("Unknown operation -- MAKE-FROM-MAG-ANG.2 " op)))))
+
+  dispatch)
+            
+; > (apply-generic.2 'magnitude (make-from-mag-ang.2 100 0.5))
+; 100
