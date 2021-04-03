@@ -205,7 +205,7 @@
 ; > (make-from-mag-ang 2 3)
 ; (polar 2 . 3)
 
-; Exercise 2.73
+; Exercise 2.73b
 
 (define (variable? x) (symbol? x))
 (define (same-variable? v1 v2)
@@ -275,3 +275,40 @@
 ; done
 ; > (deriv '(* 2 (+ x 3)) 'x)
 ; 2
+
+; Exercise 2.73c
+
+(define (install-deriv-power)
+  (define (=number? exp num)
+    (and (number? exp) (= exp num)))
+  (define (base e) (car e))
+  (define (exponent e) (cadr e))
+  (define (make-exponentiation base exponent deriv)
+    (let ((power (cond ((=number? exponent 1) 1)
+                       ((=number? exponent 2) base)
+                       ((number? exponent) (list '** base (- exponent 1)))
+                       (else (list '** base (list '- exponent 1))))))
+      (cond ((or (=number? base 0) (=number? exponent 0) (=number? deriv 0)) 0)
+            ((and (number? exponent) (number? deriv))
+             (cond ((= (* exponent deriv) 1) power)
+                   ((= exponent 1) (list '* deriv power))
+                   ((= deriv 1) (list '* exponent power))
+                   (else (list '* (* exponent deriv) power))))
+            ((=number? deriv 1) (list '* exponent power))
+            (else (list '* exponent power deriv)))))
+
+  (define (deriv-power operands var)
+    (make-exponentiation (base operands)
+                         (exponent operands)
+                         (deriv (base operands) var)))
+
+  (put 'deriv '** deriv-power)
+
+  'done)
+
+; > (install-deriv-power)
+; done
+; > (install-deriv-sum)
+; done
+; > (deriv '(** (+ 2 x) 3) 'x)
+; (* 3 (** (+ 2 x) 2))
