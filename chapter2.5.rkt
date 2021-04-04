@@ -59,11 +59,14 @@
   (put 'equ? '(scheme-number scheme-number) =)
   (put '=zero? '(scheme-number) (lambda (x) (= x 0)))
   (put 'make 'scheme-number (lambda (x) (tag x)))
+  (put 'raise '(scheme-number) (lambda (x) (make-rational x 1)))
 
   'done)
 
 (define (make-scheme-number n)
   ((get 'make 'scheme-number) n))
+
+(install-scheme-number-package)
 
 (define (install-rational-package)
   (define (numer x) (car x))
@@ -100,11 +103,14 @@
   (put 'equ? '(rational rational) equ-rat?)
   (put '=zero? '(rational) =zero-rat?)
   (put 'make 'rational (lambda (n d) (tag (make-rat n d))))
+  (put 'raise '(rational) (lambda (x) (make-complex-from-real-imag (/ (numer x) (denom x)) 0)))
 
   'done)
 
 (define (make-rational n d)
   ((get 'make 'rational) n d))
+
+(install-rational-package)
 
 (define (install-rectangular-package)
   (define (square x) (* x x))
@@ -213,6 +219,8 @@
 (define (make-complex-from-mag-ang x y)
   ((get 'make-from-mag-ang 'complex) x y))
 
+(install-complex-package)
+
 ; Exercise 2.77
 
 ; > (install-complex-package)
@@ -268,7 +276,12 @@
 
 (put-coercion 'scheme-number 'complex scheme-number->complex)
 
-(define (apply-generic op . args)
+(define (scheme-number->rational n)
+  (make-rational (contents n) 1))
+
+(put-coercion 'scheme-number 'rational scheme-number->rational)
+
+(define (apply-generic.2 op . args)
   (let ((type-tags (map type-tag args)))
     (let ((proc (get op type-tags)))
       (if proc
@@ -284,3 +297,94 @@
                         (t2->t1 (apply-generic op a1 (t2->t1 a2)))
                         (else (error "Method not found " (list op type-tags))))))
               (error "Method not found " (list op type-tags)))))))
+
+; > (install-complex-package)
+; done
+; > (add (make-complex-from-real-imag 2 3) 8)
+; (complex rectangular 10 . 3)
+
+; Exercise 2.81a
+
+; > (define (scheme-number->scheme-number n) n)
+; > (define (complex->complex z) z)
+; > (put-coercion 'scheme-number 'scheme-number scheme-number->scheme-number)
+; ok
+; > (put-coercion 'complex 'complex complex->complex)
+; ok
+; > (add 2 4) --> eternal loop
+
+; Exercise 2.81c
+
+(define (apply-generic op . args)
+  (let ((type-tags (map type-tag args)))
+    (let ((proc (get op type-tags)))
+      (if proc
+          (apply proc (map contents args))
+          (if (= (length args) 2)
+              (let ((type1 (car type-tags))
+                    (type2 (cadr type-tags))
+                    (a1 (car args))
+                    (a2 (cadr args)))
+                (if (eq? type1 type2)
+                    (error ("Method not found " (list op type-tags)))
+                    (let ((t1->t2 (get-coercion type1 type2))
+                          (t2->t1 (get-coercion type2 type1)))
+                      (cond (t1->t2 (apply-generic op (t1->t2 a1) a2))
+                            (t2->t1 (apply-generic op a1 (t2->t1 a2)))
+                            (else (error "Method not found " (list op type-tags)))))))
+              (error "Method not found " (list op type-tags)))))))
+
+; Exercise 2.82
+
+(define (find-proc-by-args op args)
+    (let ((type-tags (map type-tag args)))
+      (get op type-tags)))
+
+(define (find-proc-casting-each-type op args)
+  (define (iter iter-args)
+    (if (null? iter-args)
+        false
+        (let ((casted-args (cast-to-type (type-tag (car iter-args)) args)))
+          (let ((proc (find-proc-by-args op casted-args)))
+            (if proc
+                (cons proc casted-args)
+                (iter (cdr iter-args)))))))
+
+  (iter args))
+
+(define (cast-arg-to-type new-type-tag arg)
+  (cond ((eq? new-type-tag (type-tag arg)) arg)
+        (else (let ((cast-proc (get-coercion (type-tag arg) new-type-tag)))
+                (if cast-proc
+                    (apply cast-proc (list (contents arg)))
+                    '(unknown ()))))))
+
+(define (cast-to-type new-type-tag args)
+  (if (null? args)
+      '()
+      (cons (cast-arg-to-type new-type-tag (car args)) (cast-to-type new-type-tag (cdr args)))))
+
+(define (apply-generic.3 op . args)
+  (let ((type-tags (map type-tag args)))
+    (let ((proc (get op type-tags)))
+      (if proc
+          (apply proc (map contents args))
+          (let ((proc-and-casted-args (find-proc-casting-each-type op args)))
+            (if (pair? proc-and-casted-args)
+                (apply (car proc-and-casted-args) (map contents (cdr proc-and-casted-args)))
+                (error "Method not found " (list op type-tags))))))))
+
+; Exercise 2.83
+
+(define (raise x) (apply-generic 'raise x))
+
+; > (install-scheme-number-package)
+; done
+; > (install-rational-package)
+; done
+; > (install-complex-package)
+; done
+; > (raise 2)
+; (rational 2 . 1)
+; > (raise (make-rational 2 1))
+; (complex rectangular 2 . 0)
