@@ -227,3 +227,62 @@
         ((eq? proc 'reset) (lambda (new-seed)
                              (set! seed new-seed)))
         (else (error "Unknown proc -- RAND" proc))))
+
+; > (rand 'generate)
+; 12345
+; > (rand 'generate)
+; 1406932606
+; > (rand 'generate)
+; 654583775
+; > ((rand 'reset) 100)
+; > (rand 'generate)
+; 829870797
+; > (rand 'generate)
+; 1533044610
+; > ((rand 'reset) 0)
+; > (rand 'generate)
+; 12345
+
+; Exercise 3.7
+
+(define (make-joint account old-password new-password)
+  (define (withdraw amount)
+    ((account old-password 'withdraw) amount))
+
+  (define (deposit amount)
+    ((account old-password 'deposit) amount))
+
+  (define (dispatch guess-password m)
+    (if (eq? new-password guess-password)
+        (cond ((eq? m 'withdraw) withdraw)
+              ((eq? m 'deposit) deposit)
+              (else (error "Unknown call -- MAKE-JOINT" m)))
+        "Invalid password"))
+
+  dispatch)
+
+; > (define paul-acc (make-secure-account 100 '123))
+; > ((paul-acc '123 'deposit) 10)
+; 110
+; > (define peter-acc (make-joint paul-acc '123 '321))
+; > ((peter-acc '321 'deposit) 20)
+; 130
+; > ((paul-acc '123 'withdraw) 30)
+; 100
+; > ((peter-acc '321 'withdraw) 50)
+; 50
+
+; Exercise 3.8
+
+(define f-seed -1)
+
+(define (f new-seed)
+  (let ((old-seed f-seed))
+    (begin (set! f-seed new-seed)
+           (+ old-seed new-seed))))
+
+; > (+ (f 0) (f 1))
+; 0
+; Imitate right-to-left order
+; > (+ (f 1) (f 0))
+; 1
