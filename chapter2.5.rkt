@@ -41,12 +41,12 @@
     (let ((proc (get op type-tags)))
       (if proc
           (apply proc (map contents args))
-          (error "No methods for types -- APPLY-GENERIC " (list op type-tags))))))
+          (error "No methods for types -- APPLY-GENERIC" (list op type-tags))))))
 
 ; Chapter 2.5.1
 
 (define (add x y) (apply-generic 'add x y))
-(define (sub x y) (apply-generic 'sub x y))
+; (define (sub x y) (apply-generic 'sub x y))
 (define (mul x y) (apply-generic 'mul x y))
 (define (div x y) (apply-generic 'div x y))
 
@@ -56,6 +56,7 @@
   (put 'sub '(scheme-number scheme-number) (lambda (x y) (tag (- x y))))
   (put 'mul '(scheme-number scheme-number) (lambda (x y) (tag (* x y))))
   (put 'div '(scheme-number scheme-number) (lambda (x y) (tag (/ x y))))
+  (put 'negate '(scheme-number) (lambda (x) (tag (- x))))
   (put 'equ? '(scheme-number scheme-number) =)
   (put '=zero? '(scheme-number) (lambda (x) (= x 0)))
   (put 'make 'scheme-number (lambda (x) (tag x)))
@@ -100,6 +101,7 @@
   (put 'sub '(rational rational) (lambda (x y) (tag (sub-rat x y))))
   (put 'mul '(rational rational) (lambda (x y) (tag (mul-rat x y))))
   (put 'div '(rational rational) (lambda (x y) (tag (div-rat x y))))
+  (put 'negate '(rational) (lambda (x) (tag (make-rat (- (numer x)) (denom x)))))
   (put 'equ? '(rational rational) equ-rat?)
   (put '=zero? '(rational) =zero-rat?)
   (put 'make 'rational (lambda (n d) (tag (make-rat n d))))
@@ -202,6 +204,7 @@
   (put 'sub '(complex complex) (lambda (z1 z2) (tag (sub-complex z1 z2))))
   (put 'mul '(complex complex) (lambda (z1 z2) (tag (mul-complex z1 z2))))
   (put 'div '(complex complex) (lambda (z1 z2) (tag (div-complex z1 z2))))
+  (put 'negate '(complex) (lambda (z) (tag (make-from-real-imag (- (real-part z)) (- (imag-part z))))))
   (put 'equ? '(complex complex) equ-complex?)
   (put '=zero? '(complex) =zero-complex?)
   (put 'real-part '(complex) real-part)
@@ -237,11 +240,11 @@
 (define (type-tag datum)
   (cond ((pair? datum) (car datum))
         ((number? datum) 'scheme-number)
-        (else (error "Invalid tagged datum -- TYPE-TAG " datum))))
+        (else (error "Invalid tagged datum -- TYPE-TAG" datum))))
 (define (contents datum)
   (cond ((pair? datum) (cdr datum))
         ((number? datum) datum)
-        (else (error "Invalid tagged datum -- CONTENTS " datum))))
+        (else (error "Invalid tagged datum -- CONTENTS" datum))))
 
 ; Exercise 2.79
 
@@ -295,8 +298,8 @@
                       (t2->t1 (get-coercion type2 type1)))
                   (cond (t1->t2 (apply-generic op (t1->t2 a1) a2))
                         (t2->t1 (apply-generic op a1 (t2->t1 a2)))
-                        (else (error "Method not found " (list op type-tags))))))
-              (error "Method not found " (list op type-tags)))))))
+                        (else (error "Method not found" (list op type-tags))))))
+              (error "Method not found" (list op type-tags)))))))
 
 ; > (install-complex-package)
 ; done
@@ -326,13 +329,13 @@
                     (a1 (car args))
                     (a2 (cadr args)))
                 (if (eq? type1 type2)
-                    (error ("Method not found " (list op type-tags)))
+                    (error ("Method not found" (list op type-tags)))
                     (let ((t1->t2 (get-coercion type1 type2))
                           (t2->t1 (get-coercion type2 type1)))
                       (cond (t1->t2 (apply-generic op (t1->t2 a1) a2))
                             (t2->t1 (apply-generic op a1 (t2->t1 a2)))
-                            (else (error "Method not found " (list op type-tags)))))))
-              (error "Method not found " (list op type-tags)))))))
+                            (else (error "Method not found" (list op type-tags)))))))
+              (error "Method not found" (list op type-tags)))))))
 
 ; Exercise 2.82
 
@@ -372,19 +375,138 @@
           (let ((proc-and-casted-args (find-proc-casting-each-type op args)))
             (if (pair? proc-and-casted-args)
                 (apply (car proc-and-casted-args) (map contents (cdr proc-and-casted-args)))
-                (error "Method not found " (list op type-tags))))))))
+                (error "Method not found" (list op type-tags))))))))
 
 ; Exercise 2.83
 
 (define (raise x) (apply-generic 'raise x))
 
-; > (install-scheme-number-package)
-; done
-; > (install-rational-package)
-; done
-; > (install-complex-package)
-; done
 ; > (raise 2)
 ; (rational 2 . 1)
 ; > (raise (make-rational 2 1))
 ; (complex rectangular 2 . 0)
+
+; Chapter 2.5.3
+
+(define (install-polynomial-package)
+  (define (make-poly variable term-list)
+    (cons variable term-list))
+  (define (variable p) (car p))
+  (define (term-list p) (cdr p))
+  (define (same-variable? v1 v2)
+    (and (symbol? v1) (symbol? v2) (eq? v1 v2)))
+
+  (define (adjoin-term term term-list)
+    (if (=zero? (coeff term))
+        term-list
+        (cons term term-list)))
+
+  (define (the-empty-termlist) '())
+  (define (first-term term-list) (car term-list))
+  (define (rest-terms term-list) (cdr term-list))
+  (define (empty-termlist? term-list) (null? term-list))
+
+  (define (make-term order coeff) (list order coeff))
+  (define (order term) (car term))
+  (define (coeff term) (cadr term))
+
+  (define (add-terms L1 L2)
+    (cond ((empty-termlist? L1) L2)
+          ((empty-termlist? L2) L1)
+          (else
+           (let ((t1 (first-term L1))
+                 (t2 (first-term L2)))
+             (cond ((> (order t1) (order t2)) (adjoin-term t1 (add-terms (rest-terms L1) L2)))
+                   ((< (order t1) (order t2)) (adjoin-term t2 (add-terms L1 (rest-terms L2))))
+                   (else (adjoin-term (make-term (order t1) (add (coeff t1) (coeff t2)))
+                                     (add-terms (rest-terms L1) (rest-terms L2)))))))))
+
+  (define (mul-terms L1 L2)
+    (if (empty-termlist? L1)
+        (the-empty-termlist)
+        (add-terms (mul-term-by-all-terms (first-term L1) L2)
+                   (mul-terms (rest-terms L1) L2))))
+
+  (define (mul-term-by-all-terms t1 L)
+    (if (empty-termlist? L)
+        (the-empty-termlist)
+        (let ((t2 (first-term L)))
+          (adjoin-term
+           (make-term (+ (order t1) (order t2))
+                      (mul (coeff t1) (coeff t2)))
+           (mul-term-by-all-terms t1 (rest-terms L))))))
+
+  (define (negate-terms L)
+    (if (empty-termlist? L)
+        (the-empty-termlist)
+        (let ((t (first-term L)))
+          (adjoin-term (make-term (order t) (negate (coeff t))) (rest-terms L)))))
+
+  (define (add-poly p1 p2)
+    (if (same-variable? (variable p1) (variable p2))
+        (make-poly (variable p1)
+                   (add-terms (term-list p1)
+                              (term-list p2)))
+        (error "Polynomes from different variables -- ADD-POLY" (list p1 p2))))
+
+  (define (mul-poly p1 p2)
+    (if (same-variable? (variable p1) (variable p2))
+        (make-poly (variable p1)
+                   (mul-terms (term-list p1)
+                              (term-list p2)))
+        (error "Polynomes from different variables -- MUL-POLY" (list p1 p2))))
+
+  (define (negate-poly p)
+    (make-poly (variable p)
+               (negate-terms (term-list p))))
+
+  (define (tag p) (attach-tag 'polynomial p))
+  (put 'add '(polynomial polynomial) (lambda (p1 p2) (tag (add-poly p1 p2))))
+  (put 'mul '(polynomial polynomial) (lambda (p1 p2) (tag (mul-poly p1 p2))))
+  (put 'negate '(polynomial) (lambda (p) (tag (negate-poly p))))
+  (put 'make 'polynomial (lambda (var terms) (tag (make-poly var terms))))
+  ; Exercise 2.87
+  (put '=zero? '(polynomial) empty-termlist?)
+
+  'done)
+
+(define (make-polynomial var terms)
+  ((get 'make 'polynomial) var terms))
+
+(install-polynomial-package)
+
+; Exercise 2.88
+(define (negate x) (apply-generic 'negate x))
+(define (sub x y) (add x (negate y)))
+
+; Exercise 2.89
+
+(define (make-term.2 order coeff) (list order coeff))
+(define (order.2 term) (car term))
+(define (coeff.2 term) (cadr term))
+
+(define (the-empty-termlist.2) '())
+(define (empty-termlist.2? term-list) (null? term-list))
+
+(define (rest-terms.2 term-list) (cdr term-list))
+
+(define (first-term.2 term-list)
+  (let ((first-term-order (- (length term-list) 1))
+        (first-term-coeff (car term-list)))
+    (make-term.2 first-term-order first-term-coeff)))
+
+(define (append-zeros-to-list list n)
+  (if (= n 0)
+      list
+      (append-zeros-to-list (cons 0 list) (dec n))))
+
+(define (adjoin-term.2 term term-list)
+  (let ((new-order (order.2 term))
+        (new-coeff (coeff.2 term))
+        (current-order (- (length term-list) 1)))
+    (cons new-coeff (append-zeros-to-list term-list (- new-order current-order 1)))))
+
+; > (first-term.2 '(1 2 3))
+; (2 1)
+; > (adjoin-term.2 (make-term.2 3 8) '(1 2))
+; (8 0 1 2)
