@@ -553,3 +553,186 @@
 (define operation-table (make-table2))
 (define get (operation-table 'lookup))
 (define put (operation-table 'insert!))
+
+; Exercise 3.24
+
+(define (make-table.3 same-key?)
+  (let ((local-table (list '*table*)))
+    (define (assoc key records)
+      (cond ((null? records) false)
+            ((same-key? key (caar records)) (car records))
+            (else (assoc key (cdr records)))))
+    (define (lookup key-1 key-2)
+      (let ((subtable (assoc key-1 (cdr local-table))))
+        (if subtable
+            (let ((record (assoc key-2 (cdr subtable))))
+              (if record
+                  (cdr record)
+                  false))
+            false)))
+    (define (insert! key-1 key-2 value)
+      (let ((subtable (assoc key-1 (cdr local-table))))
+        (if subtable
+            (let ((record (assoc key-2 (cdr subtable))))
+              (if record
+                  (set-cdr! record value)
+                  (set-cdr! subtable
+                            (cons (cons key-2 value)
+                                  (cdr subtable)))))
+            (set-cdr! local-table
+                      (cons (list key-1
+                                  (cons key-2 value))
+                            (cdr local-table)))))
+      'ok)
+
+    (define (dispatch m)
+      (cond ((eq? m 'lookup) lookup)
+            ((eq? m 'insert!) insert!)
+            (else (error "Unknown operation -- MAKE-TABLE.2" m))))
+
+    dispatch))
+
+; > (define t (make-table.3 =))
+; > ((t 'insert!) 2 3 4)
+; ok
+; > ((t 'lookup) 2 3)
+; 4
+
+; Exercise 3.25
+
+(define (make-table.4)
+  (let ((local-table (list '*table*)))
+    (define (lookup head-key tail-keys table)
+      (if (null? tail-keys)
+          (let ((record (assoc head-key (cdr table))))
+            (if record
+                (cdr record)
+                false))
+          (let ((subtable (assoc head-key (cdr table))))
+            (if subtable
+                (lookup (car tail-keys) (cdr tail-keys) subtable)
+                false))))
+             
+    (define (insert! head-key tail-keys table value)
+      (if (null? tail-keys)
+          (let ((record (assoc head-key (cdr table))))
+            (if record
+                (set-cdr! record value)
+                (set-cdr! table
+                          (cons (cons head-key value)
+                                (cdr table)))))
+          (let ((subtable (assoc head-key (cdr table))))
+            (if subtable
+                (insert! (car tail-keys) (cdr tail-keys) subtable value)
+                (let ((subtable (list head-key)))
+                  (set-cdr! table (cons subtable (cdr table)))
+                  (insert! (car tail-keys) (cdr tail-keys) subtable value)))))
+
+      'ok)
+
+    (define (dispatch m)
+      (cond ((eq? m 'lookup) (lambda (keys) (lookup (car keys) (cdr keys) local-table)))
+            ((eq? m 'insert!) (lambda (keys value) (insert! (car keys) (cdr keys) local-table value)))
+            ((eq? m 'debug) local-table)
+            (else (error "Unknown operation -- MAKE-TABLE.4" m))))
+
+    dispatch))
+                                 
+(define (lookup.4 table keys) ((table 'lookup) keys))
+(define (insert.4! table keys value) ((table 'insert!) keys value))
+(define (debug.4 table) (table 'debug))
+
+; > (define t (make-table.4))
+; > (lookup.4 t '(a b))
+; #f
+; > (insert.4! t '(a b) 2)
+; ok
+; > (insert.4! t '(a c) 3)
+; ok
+; > (insert.4! t '(b c) 4)
+; ok
+; > (lookup.4 t '(a b))
+; 2
+; > (lookup.4 t '(a c))
+; 3
+; > (lookup.4 t '(b c))
+; 4
+; > (lookup.4 t '(b a))
+; #f
+
+; Exercise 3.26
+
+(define (make-table.5)
+  (define root '())
+
+  (define (make-node key value) (cons (cons key value) (cons '() '())))
+  (define (get-key node) (car (car node)))
+  (define (get-value node) (cdr (car node)))
+  (define (left-child node) (car (cdr node)))
+  (define (right-child node) (cdr (cdr node)))
+  (define (set-left-child! parent child) (set-car! (cdr parent) child))
+  (define (set-right-child! parent child) (set-cdr! (cdr parent) child))
+
+  (define (insert-rec! node key value)
+    (cond ((= key (get-key node))
+           (set-cdr! (car node) value))
+          ((< key (get-key node))
+             (if (null? (left-child node))
+                 (set-left-child! node (make-node key value))
+                 (insert-rec! (left-child node) key value)))
+            ((> key (get-key node))
+             (if (null? (right-child node))
+                 (set-right-child! node (make-node key value))
+                 (insert-rec! (right-child node) key value)))))
+
+  (define (insert! key value)
+    (if (null? root)
+        (set! root (make-node key value))
+        (insert-rec! root key value))
+    'ok)
+
+  (define (lookup-rec node key)
+    (cond ((null? node) false)
+          ((= key (get-key node)) (get-value node))
+          ((< key (get-key node)) (lookup-rec (left-child node) key))
+          ((> key (get-key node)) (lookup-rec (right-child node) key))))
+
+  (define (lookup key) (lookup-rec root key))
+
+  (define (dispatch m)
+    (cond ((eq? m 'lookup) lookup)
+          ((eq? m 'insert!) insert!)
+          ((eq? m 'debug) root)
+          (else (error "Unknown operation -- MAKE-TABLE.5" m))))
+
+  dispatch)
+
+(define (lookup.5 table key) ((table 'lookup) key))
+(define (insert.5! table key value) ((table 'insert!) key value))
+(define (debug.5 table) (table 'debug))
+
+; > (define t (make-table.5))
+; > (debug.5 t)
+; ()
+; > (lookup.5 t 5)
+; #f
+; > (insert.5! t 3 'a)
+; ok
+; > (lookup.5 t 5)
+; #f
+; > (debug.5 t)
+; ((3 . a) ())
+; > (insert.5! t 1 'b)
+; ok
+; > (lookup.5 t 5)
+; #f
+; > (lookup.5 t 1)
+; b
+; > (debug.5 t)
+; ((3 . a) ((1 . b) ()))
+; > (insert.5! t 5 'c)
+; ok
+; > (debug.5 t)
+; ((3 . a) ((1 . b) ()) (5 . c) ())
+; > (lookup.5 t 5)
+; c
