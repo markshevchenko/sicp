@@ -588,3 +588,44 @@
 ; (2 4)
 ; (1 6)
 ; done
+
+; Exercise 3.67
+
+(define (interleave.3 s1 s2 s3)
+  (if (stream-null? s1)
+      (if (stream-null? s2)
+          s3
+          (interleave s2 s3))
+      (cons-stream (stream-car s1)
+                   (interleave.3 s2 s3 (stream-cdr s1)))))
+
+(define (pairs.2 s t)
+  (cons-stream
+   (list (stream-car s) (stream-car t))
+   (interleave.3
+    (stream-map (lambda (x) (list (stream-car s) x))
+                (stream-cdr t))
+    (stream-map (lambda (y) (list y (stream-car t)))
+                (stream-cdr s))
+    (pairs.2 (stream-cdr s) (stream-cdr t)))))
+
+; > (display-stream (take (pairs.2 integers integers) 10))
+; (1 1)
+; (1 2)
+; (2 1)
+; (2 2)
+; (1 3)
+; (3 1)
+; (2 3)
+; (1 4)
+; (4 1)
+; (3 2)
+; done
+
+; Exercise 3.68
+
+(define (pairs.3 s t)
+  (interleave
+   (stream-map (lambda (x) (list (stream-car s) x))
+               t)
+   (pairs.2 (stream-cdr s) (stream-cdr t))))
