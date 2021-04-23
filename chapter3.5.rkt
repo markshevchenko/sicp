@@ -628,4 +628,174 @@
   (interleave
    (stream-map (lambda (x) (list (stream-car s) x))
                t)
-   (pairs.2 (stream-cdr s) (stream-cdr t))))
+   (pairs.3 (stream-cdr s) (stream-cdr t))))
+
+; Exercise 3.69
+
+(define (triples s t u)
+  (define (pairs sfix t u)
+    (cons-stream
+     (list sfix (stream-car t) (stream-car (stream-cdr u)))
+     (interleave
+      (stream-map (lambda (x) (list sfix (stream-car t) x))
+                  (stream-cdr (stream-cdr u)))
+      (pairs sfix (stream-cdr t) (stream-cdr u)))))
+
+  (cons-stream
+   (list (stream-car s) (stream-car t) (stream-car u))
+   (interleave
+    (pairs (stream-car s) t u)
+    (triples (stream-cdr s) (stream-cdr t) (stream-cdr u)))))
+
+(define pythagorean
+  (stream-filter
+   (lambda (x) (let ((i (car x))
+                     (j (cadr x))
+                     (k (caddr x)))
+                 (= (+ (* i i) (* j j)) (* k k))))
+   (triples integers integers integers)))
+
+; > (display-stream (take pythagorean 6))
+; (3 4 5)
+; (6 8 10)
+; (5 12 13)
+; (9 12 15)
+; (8 15 17)
+; (12 16 20)
+
+; Exercise 3.70
+
+(define (merge-weighted w s1 s2)
+  (cond ((stream-null? s1) s2)
+        ((stream-null? s2) s1)
+        (else
+         (let ((w1 (w (stream-car s1)))
+               (w2 (w (stream-car s2))))
+           (cond ((< w1 w2)
+                  (cons-stream (stream-car s1) (merge-weighted w (stream-cdr s1) s2)))
+                 ((> w1 w2)
+                  (cons-stream (stream-car s2) (merge-weighted w s1 (stream-cdr s2))))
+                 (else
+                  (cons-stream (stream-car s1)
+                               (cons-stream (stream-car s2)
+                                            (merge-weighted w (stream-cdr s1) (stream-cdr s2))))))))))
+
+(define (weighted-pairs w s t)
+  (cons-stream
+   (list (stream-car s) (stream-car t))
+   (merge-weighted w
+                  (stream-map (lambda (x) (list (stream-car s) x))
+                              (stream-cdr t))
+                  (weighted-pairs w (stream-cdr s) (stream-cdr t)))))
+
+(define (weight-by-sum element)
+  (let ((i (car element))
+        (j (cadr element)))
+    (+ i j)))
+
+
+; > (display-stream (take (weighted-pairs weight-by-sum integers integers)
+;                         10))
+; (1 1)
+; (1 2)
+; (1 3)
+; (2 2)
+; (1 4)
+; (2 3)
+; (1 5)
+; (2 4)
+; (3 3)
+; (1 6)
+; done
+
+(define (weight-by-235 element)
+  (let ((i (car element))
+        (j (cadr element)))
+    (+ (* 2 i) (* 3 j) (* 5 i j))))
+
+(define (filter-by-235 element)
+  (let ((i (car element))
+        (j (cadr element)))
+    (not
+     (or (= (remainder i 2) 0)
+         (= (remainder i 3) 0)
+         (= (remainder i 5) 0)
+         (= (remainder j 2) 0)
+         (= (remainder j 3) 0)
+         (= (remainder j 5) 0)))))
+
+; > (display-stream
+;    (take
+;     (stream-filter filter-by-235
+;                    (weighted-pairs weight-by-235 integers integers))
+;     20))
+; (1 1)
+; (1 7)
+; (1 11)
+; (1 13)
+; (1 17)
+; (1 19)
+; (1 23)
+; (1 29)
+; (1 31)
+; (7 7)
+; (1 37)
+; (1 41)
+; (1 43)
+; (1 47)
+; (1 49)
+; (1 53)
+; (7 11)
+; (1 59)
+; (1 61)
+; (7 13)
+; done
+
+(define (cube x) (* x x x))
+
+(define (weight-by-cube-sum element)
+  (let ((i (car element))
+        (j (cadr element)))
+    (+ (cube i) (cube j))))
+
+(define (stream-neighbour w s)
+  (define (iter first second other)
+    (if (= (w first) (w second))
+        (cons-stream first
+                     (cons-stream second
+                                  (iter second (stream-car other) (stream-cdr other))))
+        (iter second (stream-car other) (stream-cdr other))))
+
+  (iter (stream-car s) (stream-car (stream-cdr s)) (stream-cdr (stream-cdr s))))
+
+; > (display-stream (stream-map
+;                    (lambda (e)
+;                      (let ((i (car e))
+;                            (j (cadr e)))
+;                        (list i j (+ (cube i) (cube j)))))
+;                    (take
+;                    (stream-neighbour weight-by-cube-sum (weighted-pairs weight-by-cube-sum integers integers))
+;                    12)))
+; (1 12 1729)
+; (9 10 1729)
+; (2 16 4104)
+; (9 15 4104)
+; (2 24 13832)
+; (18 20 13832)
+; (10 27 20683)
+; (19 24 20683)
+; (4 32 32832)
+; (18 30 32832)
+; (2 34 39312)
+; (15 33 39312)
+
+; ----------------------------------------
+
+(define (integral integrand initial-value dt)
+  (define int
+    (cons-stream initial-value
+                 (add-streams (scale-stream integrand dt)
+                              int)))
+  int)
+
+; Chapter 3.5.4
