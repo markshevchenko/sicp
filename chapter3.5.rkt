@@ -799,3 +799,23 @@
   int)
 
 ; Chapter 3.5.4
+
+; Chapter 3.5.5
+
+; Exercise 3.81
+
+(define (random-stream commands)
+  (define initial-seed 123456789)
+  (define (random seed)
+    (modulo (+ (* 1103515245 seed) 12345) 2147483648))
+  (define (generator seed commands)
+    (cond ((stream-null? commands)
+           the-empty-stream)
+          ((eq? (stream-car commands) 'generate)
+           (cons-stream (random seed) (generator (random seed) (stream-cdr commands))))
+          ((eq? (stream-car commands) 'reset)
+           (cons-stream initial-seed (generator initial-seed (stream-cdr commands))))
+          (else
+           (error "Invalid command" (stream-car commands)))))
+
+  (generator (random initial-seed) commands))
