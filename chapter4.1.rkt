@@ -292,3 +292,56 @@
           (else (iter (cdr conditions)))))
 
   (iter (cdr exp)))
+
+; Exercise 4.5
+
+(define (pointed-cond? rest) (eq? (car rest) '=>))
+
+(define (expand-clauses.2 clauses)
+  (if (null? clauses)
+      'false
+      (let ((first (car clauses))
+            (rest (cdr clauses)))
+        (if (cond-else-clause? first)
+            (if (null? rest)
+                (sequence->exp (cond-actions first))
+                (error "ELSE branch is not last -- COND->IF" clauses))
+            (if (pointed-cond? rest)
+                (let ((procedure (cadr rest)))
+                  (make-if (cond-predicate first)
+                           (list procedure first)
+                           (expand-clauses.2 rest)))
+                (make-if (cond-predicate first)
+                     (sequence->exp (cond-actions first))
+                     (expand-clauses.2 rest)))))))
+
+; Exercise 4.6
+
+(define (let? exp) (tagged-list? exp 'let))
+
+(define (let-parameters exp)
+  (map car (cadr exp)))
+
+(define (let-values exp)
+  (map cadr (cadr exp)))
+
+(define (let-body exp)
+  (caddr exp))
+
+(define (make-let parameters values body)
+  (cons (list (make-lambda parameters body))
+        values))
+
+; Exercise 4.7
+
+(define (let*->nested-lets exp)
+  (define (iter parameter-pairs body)
+    (if (null? parameter-pairs)
+        body
+        (let ((parameter (car (car parameter-pairs)))
+              (value (cadr (car parameter-pairs))))
+          (make-let (list parameter) (list value) (iter (cdr parameter-pairs) body)))))
+  (let ((parameter-pairs (cadr exp))
+        (body (caddr exp)))
+    (iter parameter-pairs body)))
+    
